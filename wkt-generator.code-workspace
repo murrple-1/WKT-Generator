@@ -1,0 +1,15 @@
+{
+  "folders": [
+    {
+      "path": "./wkt-generator/"
+    },
+    {
+      "path": ".",
+      "name": "root"
+    }
+  ],
+  "settings": {
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true
+  }
+}
