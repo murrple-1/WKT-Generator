@@ -22,23 +22,19 @@
             "main": "src/main.ts",
             "polyfills": "src/polyfills.ts",
             "tsConfig": "src/tsconfig.app.json",
-
             "assets": ["src/favicon.ico", "src/assets"],
             "styles": [
               "src/styles.scss",
               "./node_modules/leaflet/dist/leaflet.css"
             ],
             "scripts": [],
-
             "optimization": false,
             "sourceMap": true,
             "namedChunks": true,
             "extractLicenses": false,
             "buildOptimizer": false,
-
             "outputHashing": "all",
             "aot": true,
-            "extractCss": true,
             "vendorChunk": false
           },
           "configurations": {
