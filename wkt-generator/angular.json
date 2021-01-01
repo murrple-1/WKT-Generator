@@ -33,7 +33,6 @@
             "namedChunks": true,
             "extractLicenses": false,
             "buildOptimizer": false,
-            "outputHashing": "all",
             "aot": true,
             "vendorChunk": false
           },
@@ -44,6 +43,7 @@
               "namedChunks": false,
               "extractLicenses": true,
               "buildOptimizer": true,
+              "outputHashing": "all",
               "fileReplacements": [
                 {
                   "replace": "src/environments/environment.ts",
