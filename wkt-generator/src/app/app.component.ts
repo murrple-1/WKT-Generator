@@ -52,6 +52,7 @@ export class AppComponent implements OnDestroy, AfterViewInit {
   private map: Map | null = null;
 
   private tileLayer = tileLayer(this.tileUrlFormat, {
+    errorTileUrl: environment.errorTileUrl,
     maxZoom: 18,
   });
   private editableLayer = new FeatureGroup();
