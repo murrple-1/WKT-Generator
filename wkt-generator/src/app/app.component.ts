@@ -2,7 +2,19 @@ import { Component, OnDestroy } from '@angular/core';
 
 import { Subject } from 'rxjs';
 
-import { MapOptions, tileLayer, latLng, Map } from 'leaflet';
+import {
+  MapOptions,
+  tileLayer,
+  latLng,
+  Map,
+  Draw,
+  FeatureGroup,
+  Control,
+  DrawEvents,
+  LeafletEvent,
+} from 'leaflet';
+
+import { environment } from '@environments/environment';
 
 @Component({
   selector: 'app-root',
@@ -12,7 +24,7 @@ import { MapOptions, tileLayer, latLng, Map } from 'leaflet';
 export class AppComponent implements OnDestroy {
   leafletOptions: MapOptions = {
     layers: [
-      tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      tileLayer(environment.defaultMapTileUrlFormat, {
         maxZoom: 18,
       }),
     ],
@@ -20,6 +32,9 @@ export class AppComponent implements OnDestroy {
     maxZoom: 18,
     center: latLng(58.784771, -110.009441),
   };
+
+  wkt = '';
+  tileUrlFormat = environment.defaultMapTileUrlFormat;
 
   private map: Map | null = null;
 
@@ -31,6 +46,36 @@ export class AppComponent implements OnDestroy {
   }
 
   onMapReady(map: Map) {
+    const editableLayer = new FeatureGroup();
+    editableLayer.addTo(map);
+
+    var drawControl = new Control.Draw({
+      draw: {
+        circlemarker: false,
+        circle: false,
+        marker: false,
+        polyline: false,
+      },
+      edit: {
+        featureGroup: editableLayer,
+      },
+    });
+    map.addControl(drawControl);
+
+    map.on(Draw.Event.CREATED, (e: LeafletEvent) => {
+      const e_ = e as DrawEvents.Created;
+
+      e_.layer.addTo(editableLayer);
+    });
+
     this.map = map;
   }
+
+  clearMap() {}
+
+  parseInWKT() {}
+
+  resetTileUrlFormat() {}
+
+  parseInTileUrlFormat() {}
 }

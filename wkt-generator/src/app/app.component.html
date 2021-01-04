@@ -1,7 +1,28 @@
 <div
-  style="height: 50vh"
+  class="app--map"
   leaflet
   [leafletOptions]="leafletOptions"
   (leafletMapReady)="onMapReady($event)"
 ></div>
-<div style="height: 50vh"></div>
+<div class="app--form">
+  <p>
+    This tools is used to convert to and from Well-Known Text (WKT) using
+    whichever map tileset you need.
+  </p>
+  <textarea rows="5" [(ngModel)]="wkt"></textarea>
+  <div>
+    <button type="button" (click)="clearMap()">Clear Map</button>
+    <button type="button" (click)="parseInWKT()">Map It!</button>
+  </div>
+  <hr />
+  <div class="app--tile-url-format-container">
+    <label for="tile-url-format">Tile URL Format</label>
+    <input id="tile-url-format" type="text" [(ngModel)]="tileUrlFormat" />
+  </div>
+  <div>
+    <button type="button" (click)="resetTileUrlFormat()">Reset</button>
+    <button type="button" (click)="parseInTileUrlFormat()">
+      Set URL Format
+    </button>
+  </div>
+</div>

@@ -6,6 +6,7 @@ import { IEnvironment } from './ienvironment';
 
 export const environment: IEnvironment = {
   production: false,
+  defaultMapTileUrlFormat: 'http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
 };
 
 /*
