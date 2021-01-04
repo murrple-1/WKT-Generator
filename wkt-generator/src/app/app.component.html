@@ -6,13 +6,19 @@
 ></div>
 <div class="app--form">
   <p>
-    This tools is used to convert to and from Well-Known Text (WKT) using
-    whichever map tileset you need.
+    This tools is used to convert to and from
+    <a
+      target="_blank"
+      href="https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry"
+      >Well-Known Text (WKT)</a
+    >
+    using whichever map tileset you need.
   </p>
-  <textarea rows="5" [(ngModel)]="wkt"></textarea>
+  <textarea #wktTextArea rows="5" [(ngModel)]="wkt"></textarea>
   <div>
     <button type="button" (click)="clearMap()">Clear Map</button>
     <button type="button" (click)="parseInWKT()">Map It!</button>
+    <button #copyWKTButton type="button">Copy to Clipboard</button>
   </div>
   <hr />
   <div class="app--tile-url-format-container">
@@ -24,5 +30,13 @@
     <button type="button" (click)="parseInTileUrlFormat()">
       Set URL Format
     </button>
+    <small
+      >URL Format Docs at
+      <a
+        target="_blank"
+        href="https://leafletjs.com/reference-1.7.1.html#tilelayer"
+        >https://leafletjs.com/reference-1.7.1.html#tilelayer</a
+      ></small
+    >
   </div>
 </div>

@@ -1,18 +1,35 @@
-import { Component, OnDestroy } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  NgZone,
+  OnDestroy,
+  ViewChild,
+} from '@angular/core';
 
 import { Subject } from 'rxjs';
 
 import {
-  MapOptions,
-  tileLayer,
-  latLng,
   Map,
+  MapOptions,
+  latLng,
+  tileLayer,
   Draw,
   FeatureGroup,
   Control,
   DrawEvents,
-  LeafletEvent,
+  Polygon,
+  LatLngLiteral,
 } from 'leaflet';
+
+import {
+  GeoJSONGeometry,
+  GeoJSONPosition,
+  parse as parseWKT,
+  stringify as stringifyWKT,
+} from 'wellknown';
+
+import * as ClipboardJS from 'clipboard';
 
 import { environment } from '@environments/environment';
 
@@ -21,61 +38,178 @@ import { environment } from '@environments/environment';
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],
 })
-export class AppComponent implements OnDestroy {
+export class AppComponent implements OnDestroy, AfterViewInit {
   leafletOptions: MapOptions = {
-    layers: [
-      tileLayer(environment.defaultMapTileUrlFormat, {
-        maxZoom: 18,
-      }),
-    ],
     zoom: 4,
     maxZoom: 18,
-    center: latLng(58.784771, -110.009441),
+    center: latLng(0, 0),
   };
 
-  wkt = '';
-  tileUrlFormat = environment.defaultMapTileUrlFormat;
+  wkt = environment.defaultWKT;
+  readonly defaultTileUrlFormat = environment.defaultMapTileUrlFormat;
+  tileUrlFormat = this.defaultTileUrlFormat;
 
   private map: Map | null = null;
 
+  private tileLayer = tileLayer(this.tileUrlFormat, {
+    maxZoom: 18,
+  });
+  private editableLayer = new FeatureGroup();
+  private polygon: Polygon | null;
+
+  private clipboard: ClipboardJS | null = null;
+
+  @ViewChild('copyWKTButton', { static: true, read: ElementRef })
+  private copyWKTButton?: ElementRef<HTMLButtonElement>;
+
+  @ViewChild('wktTextArea', { static: true, read: ElementRef })
+  private wktTextArea?: ElementRef<HTMLTextAreaElement>;
+
   private unsubscribe$ = new Subject<void>();
 
+  constructor(private zone: NgZone) {
+    const geoJson = parseWKT(this.wkt);
+
+    if (geoJson !== null && geoJson.type === 'Polygon') {
+      this.polygon = new Polygon(_geoJSONXYToLeafletXY(geoJson.coordinates));
+      this.polygon.addTo(this.editableLayer);
+    } else {
+      this.wkt = '';
+      this.polygon = null;
+    }
+  }
+
+  ngAfterViewInit() {
+    if (this.copyWKTButton !== undefined && this.wktTextArea !== undefined) {
+      this.clipboard = new ClipboardJS(this.copyWKTButton.nativeElement, {
+        action: () => 'copy',
+        target: () => this.wktTextArea?.nativeElement as HTMLTextAreaElement,
+      });
+    }
+  }
+
   ngOnDestroy() {
+    if (this.clipboard !== null) {
+      this.clipboard.destroy();
+    }
+
     this.unsubscribe$.next();
     this.unsubscribe$.complete();
   }
 
   onMapReady(map: Map) {
-    const editableLayer = new FeatureGroup();
-    editableLayer.addTo(map);
-
-    var drawControl = new Control.Draw({
-      draw: {
-        circlemarker: false,
-        circle: false,
-        marker: false,
-        polyline: false,
-      },
-      edit: {
-        featureGroup: editableLayer,
-      },
-    });
-    map.addControl(drawControl);
-
-    map.on(Draw.Event.CREATED, (e: LeafletEvent) => {
-      const e_ = e as DrawEvents.Created;
-
-      e_.layer.addTo(editableLayer);
-    });
-
     this.map = map;
+
+    this.tileLayer.addTo(this.map);
+    this.editableLayer.addTo(this.map);
+
+    this.map.addControl(
+      new Control.Draw({
+        draw: {
+          circlemarker: false,
+          circle: false,
+          marker: false,
+          polyline: false,
+        },
+        edit: {
+          featureGroup: this.editableLayer,
+          remove: false,
+        },
+      }),
+    );
+
+    this.map.on(Draw.Event.CREATED, e => {
+      if (this.polygon !== null) {
+        this.polygon.remove();
+        this.polygon = null;
+      }
+
+      const e_ = e as DrawEvents.Created;
+      const layer_ = e_.layer as Polygon;
+
+      this.polygon = layer_;
+
+      layer_.addTo(this.editableLayer);
+
+      const geoJson = layer_.toGeoJSON();
+      const wkt = stringifyWKT(geoJson.geometry as GeoJSONGeometry);
+
+      this.zone.run(() => {
+        this.wkt = wkt;
+      });
+    });
+
+    this.map.on(Draw.Event.EDITED, e => {
+      const e_ = e as DrawEvents.Edited;
+
+      const layer_ = e_.layers.getLayers()[0] as Polygon;
+
+      const geoJson = layer_.toGeoJSON();
+      const wkt = stringifyWKT(geoJson.geometry as GeoJSONGeometry);
+
+      this.zone.run(() => {
+        this.wkt = wkt;
+      });
+    });
+
+    if (this.polygon !== null) {
+      this.map.panTo(this.polygon.getCenter(), {
+        animate: false,
+      });
+    }
   }
 
-  clearMap() {}
+  clearMap() {
+    if (this.polygon !== null) {
+      this.polygon.remove();
+      this.polygon = null;
+    }
 
-  parseInWKT() {}
+    this.zone.run(() => {
+      this.wkt = '';
+    });
+  }
 
-  resetTileUrlFormat() {}
+  parseInWKT() {
+    const geoJson = parseWKT(this.wkt);
 
-  parseInTileUrlFormat() {}
+    if (geoJson !== null && geoJson.type === 'Polygon') {
+      if (this.polygon !== null) {
+        this.polygon.remove();
+        this.polygon = null;
+      }
+
+      this.polygon = new Polygon(_geoJSONXYToLeafletXY(geoJson.coordinates));
+      this.polygon.addTo(this.editableLayer);
+
+      if (this.map !== null) {
+        this.map.panTo(this.polygon.getCenter(), {
+          animate: true,
+        });
+      }
+    }
+  }
+
+  resetTileUrlFormat() {
+    this.tileLayer.setUrl(this.defaultTileUrlFormat, false);
+
+    this.zone.run(() => {
+      this.tileUrlFormat = this.defaultTileUrlFormat;
+    });
+  }
+
+  parseInTileUrlFormat() {
+    this.tileLayer.setUrl(this.tileUrlFormat, false);
+  }
+}
+
+function _geoJSONXYToLeafletXY(
+  coordinates: GeoJSONPosition[][],
+): LatLngLiteral[][] {
+  return coordinates.map(c_ =>
+    c_.map<LatLngLiteral>(c__ => ({
+      lat: c__[1],
+      lng: c__[0],
+    })),
+  );
 }
