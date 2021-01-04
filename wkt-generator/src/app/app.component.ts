@@ -93,6 +93,11 @@ export class AppComponent implements OnDestroy, AfterViewInit {
       this.clipboard.destroy();
     }
 
+    if (this.map !== null) {
+      this.map.off();
+      this.map.remove();
+    }
+
     this.unsubscribe$.next();
     this.unsubscribe$.complete();
   }
@@ -105,6 +110,7 @@ export class AppComponent implements OnDestroy, AfterViewInit {
 
     this.map.addControl(
       new Control.Draw({
+        position: 'bottomleft',
         draw: {
           circlemarker: false,
           circle: false,
@@ -113,7 +119,6 @@ export class AppComponent implements OnDestroy, AfterViewInit {
         },
         edit: {
           featureGroup: this.editableLayer,
-          remove: false,
         },
       }),
     );
@@ -152,22 +157,23 @@ export class AppComponent implements OnDestroy, AfterViewInit {
       });
     });
 
+    this.map.on(Draw.Event.DELETED, e => {
+      const e_ = e as DrawEvents.Deleted;
+
+      if (e_.layers.getLayers().length > 0) {
+        this.polygon = null;
+
+        this.zone.run(() => {
+          this.wkt = '';
+        });
+      }
+    });
+
     if (this.polygon !== null) {
       this.map.panTo(this.polygon.getCenter(), {
         animate: false,
       });
     }
-  }
-
-  clearMap() {
-    if (this.polygon !== null) {
-      this.polygon.remove();
-      this.polygon = null;
-    }
-
-    this.zone.run(() => {
-      this.wkt = '';
-    });
   }
 
   parseInWKT() {
