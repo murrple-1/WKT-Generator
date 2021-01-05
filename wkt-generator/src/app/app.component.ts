@@ -40,8 +40,9 @@ import { environment } from '@environments/environment';
 })
 export class AppComponent implements OnDestroy, AfterViewInit {
   leafletOptions: MapOptions = {
-    zoom: 4,
-    maxZoom: 18,
+    zoom: environment.initialZoom,
+    maxZoom: environment.maxZoom,
+    minZoom: environment.minZoom,
     center: latLng(0, 0),
   };
 
@@ -53,7 +54,8 @@ export class AppComponent implements OnDestroy, AfterViewInit {
 
   private tileLayer = tileLayer(this.tileUrlFormat, {
     errorTileUrl: environment.errorTileUrl,
-    maxZoom: 18,
+    minZoom: environment.minZoom,
+    maxZoom: environment.maxZoom,
   });
   private editableLayer = new FeatureGroup();
   private polygon: Polygon | null;
