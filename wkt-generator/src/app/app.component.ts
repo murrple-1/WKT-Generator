@@ -39,6 +39,12 @@ import { environment } from '@environments/environment';
   styleUrls: ['./app.component.scss'],
 })
 export class AppComponent implements OnDestroy, AfterViewInit {
+  @ViewChild('copyWKTButton', { static: true, read: ElementRef })
+  private copyWKTButton?: ElementRef<HTMLButtonElement>;
+
+  @ViewChild('wktTextArea', { static: true, read: ElementRef })
+  private wktTextArea?: ElementRef<HTMLTextAreaElement>;
+
   leafletOptions: MapOptions = {
     zoom: environment.initialZoom,
     maxZoom: environment.maxZoom,
@@ -62,24 +68,31 @@ export class AppComponent implements OnDestroy, AfterViewInit {
 
   private clipboard: ClipboardJS | null = null;
 
-  @ViewChild('copyWKTButton', { static: true, read: ElementRef })
-  private copyWKTButton?: ElementRef<HTMLButtonElement>;
-
-  @ViewChild('wktTextArea', { static: true, read: ElementRef })
-  private wktTextArea?: ElementRef<HTMLTextAreaElement>;
-
   private unsubscribe$ = new Subject<void>();
 
   constructor(private zone: NgZone) {
     const geoJson = parseWKT(this.wkt);
 
     if (geoJson !== null && geoJson.type === 'Polygon') {
-      this.polygon = new Polygon(_geoJSONXYToLeafletXY(geoJson.coordinates));
+      this.polygon = new Polygon(
+        AppComponent.geoJSONXYToLeafletXY(geoJson.coordinates),
+      );
       this.polygon.addTo(this.editableLayer);
     } else {
       this.wkt = '';
       this.polygon = null;
     }
+  }
+
+  private static geoJSONXYToLeafletXY(
+    coordinates: GeoJSONPosition[][],
+  ): LatLngLiteral[][] {
+    return coordinates.map(c1 =>
+      c1.map<LatLngLiteral>(c2 => ({
+        lat: c2[1],
+        lng: c2[0],
+      })),
+    );
   }
 
   ngAfterViewInit() {
@@ -188,7 +201,9 @@ export class AppComponent implements OnDestroy, AfterViewInit {
         this.polygon = null;
       }
 
-      this.polygon = new Polygon(_geoJSONXYToLeafletXY(geoJson.coordinates));
+      this.polygon = new Polygon(
+        AppComponent.geoJSONXYToLeafletXY(geoJson.coordinates),
+      );
       this.polygon.addTo(this.editableLayer);
 
       if (this.map !== null) {
@@ -210,15 +225,4 @@ export class AppComponent implements OnDestroy, AfterViewInit {
   parseInTileUrlFormat() {
     this.tileLayer.setUrl(this.tileUrlFormat, false);
   }
-}
-
-function _geoJSONXYToLeafletXY(
-  coordinates: GeoJSONPosition[][],
-): LatLngLiteral[][] {
-  return coordinates.map(c_ =>
-    c_.map<LatLngLiteral>(c__ => ({
-      lat: c__[1],
-      lng: c__[0],
-    })),
-  );
 }
