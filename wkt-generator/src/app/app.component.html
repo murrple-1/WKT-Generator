@@ -36,4 +36,37 @@
       ></small
     >
   </div>
+  <hr />
+  <div class="app--pan-controls-container">
+    <label for="latitude">Latitude</label>
+    <input
+      id="latitude"
+      type="number"
+      step="1"
+      min="-90"
+      max="90"
+      [(ngModel)]="latitude"
+    />
+    <label for="longitude">Longitude</label>
+    <input
+      id="longitude"
+      type="number"
+      step="1"
+      min="-180"
+      max="180"
+      [(ngModel)]="longitude"
+    />
+    <label for="zoom">Zoom</label>
+    <input
+      id="zoom"
+      type="number"
+      step="1"
+      [min]="minZoom"
+      [max]="maxZoom"
+      [(ngModel)]="zoom"
+    />
+  </div>
+  <div>
+    <button type="button" (click)="panTo()">Pan To</button>
+  </div>
 </div>

@@ -49,12 +49,18 @@ export class AppComponent implements OnDestroy, AfterViewInit {
     zoom: environment.initialZoom,
     maxZoom: environment.maxZoom,
     minZoom: environment.minZoom,
-    center: latLng(0, 0),
+    center: latLng(environment.initialLatitude, environment.initialLongitude),
   };
 
   wkt = environment.defaultWKT;
   readonly defaultTileUrlFormat = environment.defaultMapTileUrlFormat;
   tileUrlFormat = this.defaultTileUrlFormat;
+
+  latitude = environment.initialLatitude.toString(10);
+  longitude = environment.initialLongitude.toString(10);
+  zoom = environment.initialZoom.toString(10);
+  readonly minZoom = environment.minZoom;
+  readonly maxZoom = environment.maxZoom;
 
   private map: Map | null = null;
 
@@ -185,6 +191,19 @@ export class AppComponent implements OnDestroy, AfterViewInit {
       }
     });
 
+    this.map.on('move', e => {
+      const map = e.target as Map;
+
+      const center = map.getCenter();
+      const zoom = map.getZoom();
+
+      this.zone.run(() => {
+        this.latitude = center.lat.toString(10);
+        this.longitude = center.lng.toString(10);
+        this.zoom = zoom.toString(10);
+      });
+    });
+
     if (this.polygon !== null) {
       this.map.panTo(this.polygon.getCenter(), {
         animate: false,
@@ -224,5 +243,39 @@ export class AppComponent implements OnDestroy, AfterViewInit {
 
   parseInTileUrlFormat() {
     this.tileLayer.setUrl(this.tileUrlFormat, false);
+  }
+
+  panTo() {
+    if (this.map !== null) {
+      let lat: number;
+      let lng: number;
+      let zoom: number;
+
+      lat = parseFloat(this.latitude);
+      if (isNaN(lat)) {
+        return;
+      }
+
+      lng = parseFloat(this.longitude);
+      if (isNaN(lng)) {
+        return;
+      }
+
+      zoom = parseInt(this.zoom);
+      if (isNaN(zoom)) {
+        return;
+      }
+
+      this.map.setView(
+        {
+          lat,
+          lng,
+        },
+        zoom,
+        {
+          animate: true,
+        },
+      );
+    }
   }
 }
