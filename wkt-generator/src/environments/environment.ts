@@ -6,7 +6,7 @@ import { IEnvironment } from './ienvironment';
 
 export const environment: IEnvironment = {
   production: false,
-  defaultMapTileUrlFormat: 'http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  defaultMapTileUrlFormat: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
   errorTileUrl: undefined,
   initialZoom: 4,
   maxZoom: 18,
