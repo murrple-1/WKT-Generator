@@ -192,10 +192,10 @@ export class AppComponent implements OnDestroy, AfterViewInit {
     });
 
     this.map.on('move', e => {
-      const map = e.target as Map;
+      const map_ = e.target as Map;
 
-      const center = map.getCenter();
-      const zoom = map.getZoom();
+      const center = map_.getCenter();
+      const zoom = map_.getZoom();
 
       this.zone.run(() => {
         this.latitude = center.lat.toString(10);
@@ -247,21 +247,17 @@ export class AppComponent implements OnDestroy, AfterViewInit {
 
   panTo() {
     if (this.map !== null) {
-      let lat: number;
-      let lng: number;
-      let zoom: number;
-
-      lat = parseFloat(this.latitude);
+      const lat = parseFloat(this.latitude);
       if (isNaN(lat)) {
         return;
       }
 
-      lng = parseFloat(this.longitude);
+      const lng = parseFloat(this.longitude);
       if (isNaN(lng)) {
         return;
       }
 
-      zoom = parseInt(this.zoom);
+      const zoom = parseInt(this.zoom, 10);
       if (isNaN(zoom)) {
         return;
       }
