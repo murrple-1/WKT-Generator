@@ -2,7 +2,8 @@ import { enableProdMode } from '@angular/core';
 import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
 
 import { Icon } from 'leaflet';
-import 'leaflet-draw';
+
+import '@geoman-io/leaflet-geoman-free';
 
 import { AppModule } from '@app/app.module';
 import { environment } from '@environments/environment';

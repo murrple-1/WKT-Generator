@@ -14,13 +14,11 @@ import {
   MapOptions,
   latLng,
   tileLayer,
-  Draw,
-  FeatureGroup,
-  Control,
-  DrawEvents,
   Polygon,
+  polygon,
   LatLngLiteral,
   Marker,
+  marker,
   LatLng,
 } from 'leaflet';
 
@@ -71,9 +69,7 @@ export class AppComponent implements OnDestroy, AfterViewInit {
     minZoom: environment.minZoom,
     maxZoom: environment.maxZoom,
   });
-  private editableLayer = new FeatureGroup();
-  private pointMarker: Marker | null;
-  private polygon: Polygon | null;
+  private drawnLayer: Polygon | Marker | null = null;
 
   private clipboard: ClipboardJS | null = null;
 
@@ -84,29 +80,19 @@ export class AppComponent implements OnDestroy, AfterViewInit {
 
     if (geoJson !== null) {
       if (geoJson.type === 'Point') {
-        this.pointMarker = new Marker([
+        this.drawnLayer = marker([
           geoJson.coordinates[0],
           geoJson.coordinates[1],
         ]);
-        this.pointMarker.addTo(this.editableLayer);
-
-        this.polygon = null;
       } else if (geoJson.type === 'Polygon') {
-        this.polygon = new Polygon(
+        this.drawnLayer = polygon(
           AppComponent.geoJSONXYToLeafletXY(geoJson.coordinates),
         );
-        this.polygon.addTo(this.editableLayer);
-
-        this.pointMarker = null;
       } else {
         this.wkt = '';
-        this.polygon = null;
-        this.pointMarker = null;
       }
     } else {
       this.wkt = '';
-      this.polygon = null;
-      this.pointMarker = null;
     }
   }
 
@@ -148,74 +134,37 @@ export class AppComponent implements OnDestroy, AfterViewInit {
     this.map = map;
 
     this.tileLayer.addTo(this.map);
-    this.editableLayer.addTo(this.map);
 
-    this.map.addControl(
-      new Control.Draw({
-        position: 'bottomleft',
-        draw: {
-          circlemarker: false,
-          circle: false,
-          polyline: false,
-        },
-        edit: {
-          featureGroup: this.editableLayer,
-        },
-      }),
-    );
+    this.map.pm.addControls({
+      position: 'bottomleft',
+      drawMarker: true,
+      drawPolygon: true,
+      drawRectangle: true,
 
-    this.map.on(Draw.Event.CREATED, e => {
-      if (this.pointMarker !== null) {
-        this.pointMarker.remove();
-        this.pointMarker = null;
-      }
-
-      if (this.polygon !== null) {
-        this.polygon.remove();
-        this.polygon = null;
-      }
-
-      const e_ = e as DrawEvents.Created;
-      const layer_ = e_.layer;
-
-      if (layer_ instanceof Marker) {
-        this.pointMarker = layer_;
-      } else if (layer_ instanceof Polygon) {
-        this.polygon = layer_;
-      }
-
-      layer_.addTo(this.editableLayer);
-
-      const geoJson = layer_.toGeoJSON();
-      const wkt = stringifyWKT(geoJson.geometry as GeoJSONGeometry);
-
-      this.zone.run(() => {
-        this.wkt = wkt;
-      });
+      drawCircle: false,
+      drawCircleMarker: false,
+      drawPolyline: false,
+      editMode: false,
+      dragMode: false,
+      cutPolygon: false,
+      rotateMode: false,
+      removalMode: false,
     });
 
-    this.map.on(Draw.Event.EDITED, e => {
-      const e_ = e as DrawEvents.Edited;
+    this.map.on('pm:create', e => {
+      this.map?.pm.disableDraw();
 
-      const layer_ = e_.layers.getLayers()[0] as Polygon | Marker;
+      this.drawnLayer?.remove();
+      this.drawnLayer = null;
 
-      const geoJson = layer_.toGeoJSON();
-      const wkt = stringifyWKT(geoJson.geometry as GeoJSONGeometry);
+      if (e.layer instanceof Marker || e.layer instanceof Polygon) {
+        this.drawnLayer = e.layer;
 
-      this.zone.run(() => {
-        this.wkt = wkt;
-      });
-    });
-
-    this.map.on(Draw.Event.DELETED, e => {
-      const e_ = e as DrawEvents.Deleted;
-
-      if (e_.layers.getLayers().length > 0) {
-        this.pointMarker = null;
-        this.polygon = null;
+        const geoJson = e.layer.toGeoJSON();
+        const wkt = stringifyWKT(geoJson.geometry as GeoJSONGeometry);
 
         this.zone.run(() => {
-          this.wkt = '';
+          this.wkt = wkt;
         });
       }
     });
@@ -233,38 +182,53 @@ export class AppComponent implements OnDestroy, AfterViewInit {
       });
     });
 
-    let center: LatLng;
-    if (this.pointMarker !== null) {
-      center = this.pointMarker.getLatLng();
-    } else if (this.polygon !== null) {
-      center = this.polygon.getCenter();
-    } else {
-      throw new Error('unknown center');
-    }
+    if (this.drawnLayer !== null) {
+      this.drawnLayer.addTo(this.map);
 
-    this.map.panTo(center, {
-      animate: false,
-    });
+      let center: LatLng;
+      if (this.drawnLayer instanceof Marker) {
+        center = this.drawnLayer.getLatLng();
+      } else if (this.drawnLayer instanceof Polygon) {
+        center = this.drawnLayer.getCenter();
+      } else {
+        throw new Error('unknown center');
+      }
+
+      this.map.panTo(center, {
+        animate: false,
+      });
+    }
   }
 
   parseInWKT() {
     const geoJson = parseWKT(this.wkt);
 
-    if (geoJson !== null && geoJson.type === 'Polygon') {
-      if (this.polygon !== null) {
-        this.polygon.remove();
-        this.polygon = null;
+    if (geoJson !== null) {
+      if (this.drawnLayer !== null) {
+        this.drawnLayer.remove();
+        this.drawnLayer = null;
       }
 
-      this.polygon = new Polygon(
-        AppComponent.geoJSONXYToLeafletXY(geoJson.coordinates),
-      );
-      this.polygon.addTo(this.editableLayer);
+      if (geoJson.type === 'Point') {
+        this.drawnLayer = marker(
+          latLng([geoJson.coordinates[0], geoJson.coordinates[1]]),
+        );
 
-      if (this.map !== null) {
-        this.map.panTo(this.polygon.getCenter(), {
-          animate: true,
-        });
+        if (this.map !== null) {
+          this.map.panTo(this.drawnLayer.getLatLng(), {
+            animate: true,
+          });
+        }
+      } else if (geoJson.type === 'Polygon') {
+        this.drawnLayer = polygon(
+          AppComponent.geoJSONXYToLeafletXY(geoJson.coordinates),
+        );
+
+        if (this.map !== null) {
+          this.map.panTo(this.drawnLayer.getCenter(), {
+            animate: true,
+          });
+        }
       }
     }
   }
