@@ -20,6 +20,8 @@ import {
   DrawEvents,
   Polygon,
   LatLngLiteral,
+  Marker,
+  LatLng,
 } from 'leaflet';
 
 import {
@@ -70,6 +72,7 @@ export class AppComponent implements OnDestroy, AfterViewInit {
     maxZoom: environment.maxZoom,
   });
   private editableLayer = new FeatureGroup();
+  private pointMarker: Marker | null;
   private polygon: Polygon | null;
 
   private clipboard: ClipboardJS | null = null;
@@ -79,14 +82,31 @@ export class AppComponent implements OnDestroy, AfterViewInit {
   constructor(private zone: NgZone) {
     const geoJson = parseWKT(this.wkt);
 
-    if (geoJson !== null && geoJson.type === 'Polygon') {
-      this.polygon = new Polygon(
-        AppComponent.geoJSONXYToLeafletXY(geoJson.coordinates),
-      );
-      this.polygon.addTo(this.editableLayer);
+    if (geoJson !== null) {
+      if (geoJson.type === 'Point') {
+        this.pointMarker = new Marker([
+          geoJson.coordinates[0],
+          geoJson.coordinates[1],
+        ]);
+        this.pointMarker.addTo(this.editableLayer);
+
+        this.polygon = null;
+      } else if (geoJson.type === 'Polygon') {
+        this.polygon = new Polygon(
+          AppComponent.geoJSONXYToLeafletXY(geoJson.coordinates),
+        );
+        this.polygon.addTo(this.editableLayer);
+
+        this.pointMarker = null;
+      } else {
+        this.wkt = '';
+        this.polygon = null;
+        this.pointMarker = null;
+      }
     } else {
       this.wkt = '';
       this.polygon = null;
+      this.pointMarker = null;
     }
   }
 
@@ -136,7 +156,6 @@ export class AppComponent implements OnDestroy, AfterViewInit {
         draw: {
           circlemarker: false,
           circle: false,
-          marker: false,
           polyline: false,
         },
         edit: {
@@ -146,15 +165,24 @@ export class AppComponent implements OnDestroy, AfterViewInit {
     );
 
     this.map.on(Draw.Event.CREATED, e => {
+      if (this.pointMarker !== null) {
+        this.pointMarker.remove();
+        this.pointMarker = null;
+      }
+
       if (this.polygon !== null) {
         this.polygon.remove();
         this.polygon = null;
       }
 
       const e_ = e as DrawEvents.Created;
-      const layer_ = e_.layer as Polygon;
+      const layer_ = e_.layer;
 
-      this.polygon = layer_;
+      if (layer_ instanceof Marker) {
+        this.pointMarker = layer_;
+      } else if (layer_ instanceof Polygon) {
+        this.polygon = layer_;
+      }
 
       layer_.addTo(this.editableLayer);
 
@@ -169,7 +197,7 @@ export class AppComponent implements OnDestroy, AfterViewInit {
     this.map.on(Draw.Event.EDITED, e => {
       const e_ = e as DrawEvents.Edited;
 
-      const layer_ = e_.layers.getLayers()[0] as Polygon;
+      const layer_ = e_.layers.getLayers()[0] as Polygon | Marker;
 
       const geoJson = layer_.toGeoJSON();
       const wkt = stringifyWKT(geoJson.geometry as GeoJSONGeometry);
@@ -183,6 +211,7 @@ export class AppComponent implements OnDestroy, AfterViewInit {
       const e_ = e as DrawEvents.Deleted;
 
       if (e_.layers.getLayers().length > 0) {
+        this.pointMarker = null;
         this.polygon = null;
 
         this.zone.run(() => {
@@ -204,11 +233,18 @@ export class AppComponent implements OnDestroy, AfterViewInit {
       });
     });
 
-    if (this.polygon !== null) {
-      this.map.panTo(this.polygon.getCenter(), {
-        animate: false,
-      });
+    let center: LatLng;
+    if (this.pointMarker !== null) {
+      center = this.pointMarker.getLatLng();
+    } else if (this.polygon !== null) {
+      center = this.polygon.getCenter();
+    } else {
+      throw new Error('unknown center');
     }
+
+    this.map.panTo(center, {
+      animate: false,
+    });
   }
 
   parseInWKT() {
