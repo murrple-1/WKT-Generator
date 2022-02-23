@@ -215,6 +215,8 @@ export class AppComponent implements OnDestroy, AfterViewInit {
         );
 
         if (this.map !== null) {
+          this.drawnLayer.addTo(this.map);
+
           this.map.panTo(this.drawnLayer.getLatLng(), {
             animate: true,
           });
@@ -225,6 +227,8 @@ export class AppComponent implements OnDestroy, AfterViewInit {
         );
 
         if (this.map !== null) {
+          this.drawnLayer.addTo(this.map);
+
           this.map.panTo(this.drawnLayer.getCenter(), {
             animate: true,
           });
