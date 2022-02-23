@@ -211,7 +211,7 @@ export class AppComponent implements OnDestroy, AfterViewInit {
 
       if (geoJson.type === 'Point') {
         this.drawnLayer = marker(
-          latLng([geoJson.coordinates[0], geoJson.coordinates[1]]),
+          latLng([geoJson.coordinates[1], geoJson.coordinates[0]]),
         );
 
         if (this.map !== null) {
